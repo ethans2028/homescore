@@ -70,5 +70,7 @@ def request_permit_data(
             pull_data = len(data) == MAX_PAGE_SIZE
             params["$offset"] += MAX_PAGE_SIZE
             result.extend(data)
+        else:
+            raise Exception(f"unexpected HTTP status code: {resp.status_code}")
 
     return result
