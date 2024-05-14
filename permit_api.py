@@ -5,6 +5,8 @@ Module containing helper functions to interact with the Seattle housing permits 
 from typing import Dict, List, Optional
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util import Retry
 
 PERMIT_API_URL = "https://data.seattle.gov/resource/76t5-zqzr.json"
 ISSUED_PERMITS_STATUS = "Issued"
@@ -37,9 +39,17 @@ def request_permit_data(
     """
     params = {}
     headers = {}
+    result = []
+
+    s = requests.Session()
+    retries = Retry(total=5, backoff_factor=0.1, status_forcelist=[500, 502, 503, 504])
+    s.mount("https://", HTTPAdapter(max_retries=retries))
+
+    params["$offset"] = 0
+    params["$limit"] = MAX_PAGE_SIZE
 
     if partial_search:
-        params["$where"] = f"originaladdress1 like '{address}'"
+        params["$where"] = f"originaladdress1 like '%{address}%'"
     else:
         params["originaladdress1"] = address
 
@@ -51,6 +61,14 @@ def request_permit_data(
     if app_token:
         headers["X-App-Token"] = app_token
 
-    resp = requests.get(PERMIT_API_URL, headers=headers, params=params)
+    pull_data = True
+    # Retrieve all filled pages
+    while pull_data:
+        resp = s.get(PERMIT_API_URL, headers=headers, params=params)
+        if resp.status_code == 200:
+            data = resp.json()
+            pull_data = len(data) == MAX_PAGE_SIZE
+            params["$offset"] += MAX_PAGE_SIZE
+            result.extend(data)
 
-    return resp.json()
+    return result
