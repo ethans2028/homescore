@@ -33,6 +33,7 @@ def request_permit_data(
 
         - app_token: Application token to authenticate with the Socrata API.
                      See: https://dev.socrata.com/foundry/data.seattle.gov/76t5-zqzr
+                          https://dev.socrata.com/docs/app-tokens.html
     """
     params = {}
     headers = {}
